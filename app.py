@@ -1,9 +1,20 @@
+
 from flask import Flask, request, jsonify
 import instaloader
 import re
+import time
+import os
 
 app = Flask(__name__)
 L = instaloader.Instaloader()
+
+# Get Instagram credentials from environment variables
+INSTAGRAM_USERNAME = os.getenv('INSTAGRAM_USERNAME')
+INSTAGRAM_PASSWORD = os.getenv('INSTAGRAM_PASSWORD')
+
+# Log in to Instagram (if credentials are provided)
+if INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD:
+    L.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
 
 @app.route('/insta', methods=['GET'])
 def insta_downloader():
@@ -30,6 +41,9 @@ def insta_downloader():
 
         shortcode = match.group(1)
         print(f"Extracted Shortcode: {shortcode}")
+
+        # Rate limiting
+        time.sleep(2)  # Wait for 2 seconds between requests
 
         post = instaloader.Post.from_shortcode(L.context, shortcode)
 
