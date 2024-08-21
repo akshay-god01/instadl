@@ -1,9 +1,19 @@
+import time
 from flask import Flask, request, jsonify
 import instaloader
 import re
 
 app = Flask(__name__)
 L = instaloader.Instaloader()
+
+def retry_request(func, retries=3, delay=10):
+    for i in range(retries):
+        try:
+            return func()
+        except Exception as e:
+            print(f"Attempt {i+1} failed: {e}")
+            time.sleep(delay)
+    raise Exception("All retry attempts failed.")
 
 @app.route('/insta', methods=['GET'])
 def insta_downloader():
@@ -12,10 +22,8 @@ def insta_downloader():
         return jsonify({"error": "No URL provided."}), 400
 
     try:
-        # Print the URL for debugging
         print(f"Received URL: {url}")
 
-        # Extract shortcode from URL
         if 'instagram.com/p/' in url:
             match = re.search(r'/p/([^/?]+)', url)
         elif 'instagram.com/reel/' in url:
@@ -31,25 +39,25 @@ def insta_downloader():
         shortcode = match.group(1)
         print(f"Extracted Shortcode: {shortcode}")
 
-        # Access the post data without logging in
-        post = instaloader.Post.from_shortcode(L.context, shortcode)
+        def fetch_post():
+            post = instaloader.Post.from_shortcode(L.context, shortcode)
+            return post
 
-        # Collecting data
+        post = retry_request(fetch_post)
+
         data = {
             "caption": post.caption,
             "likes": post.likes,
             "media": []
         }
 
-        # Handle carousel posts
-        if post.is_video:  # If it's a video post
+        if post.is_video:
             data["media"].append({
                 "media_url": post.url,
                 "is_video": True,
                 "video_url": post.video_url
             })
         else:
-            # Check for carousel (multiple media)
             if post.get_sidecar_nodes():
                 for item in post.get_sidecar_nodes():
                     media_data = {
@@ -60,7 +68,6 @@ def insta_downloader():
                         media_data["video_url"] = item.video_url
                     data["media"].append(media_data)
             else:
-                # Single media post
                 data["media"].append({
                     "media_url": post.url,
                     "is_video": post.is_video,
@@ -73,4 +80,5 @@ def insta_downloader():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    port = int(os.getenv('PORT', 5000))  # Default to 5000 if PORT is not set
+    app.run(host='0.0.0.0', port=port, debug=True)
