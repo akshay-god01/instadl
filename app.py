@@ -50,8 +50,12 @@ def insta_downloader():
         print(f"Extracted Shortcode: {shortcode}")
 
         def fetch_post():
-            post = instaloader.Post.from_shortcode(L.context, shortcode)
-            return post
+            try:
+                post = instaloader.Post.from_shortcode(L.context, shortcode)
+                return post
+            except Exception as e:
+                print(f"Error in fetch_post: {e}")
+                raise
 
         post = retry_request(fetch_post)
 
