@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import instaloader
 import re
+import time  # Import the time module
 
 app = Flask(__name__)
 L = instaloader.Instaloader()
