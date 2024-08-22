@@ -1,11 +1,10 @@
 import instaloader
-import re
 
 L = instaloader.Instaloader()
+username = 'instadl6'  # Replace with your Instagram username
 
-# Load the session from the file
 try:
-    L.load_session_from_file(filename='session-instagram')
+    L.load_session_from_file(username=username, filename='session-instagram')
     print("Session loaded successfully.")
 except Exception as e:
     print(f"Failed to load session: {e}")
