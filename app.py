@@ -1,9 +1,6 @@
-from flask import Flask, request, jsonify
 import instaloader
 import re
-import time  # Import the time module
 
-app = Flask(__name__)
 L = instaloader.Instaloader()
 
 # Load the session from the file
@@ -12,86 +9,32 @@ try:
     print("Session loaded successfully.")
 except Exception as e:
     print(f"Failed to load session: {e}")
-    # Optionally, you can fall back to manual login
-    # L.login(USERNAME, PASSWORD)
 
-def retry_request(func, retries=3, delay=10):
-    for i in range(retries):
-        try:
-            return func()
-        except Exception as e:
-            print(f"Attempt {i+1} failed: {e}")
-            time.sleep(delay)
-    raise Exception("All retry attempts failed.")
+# Test with a known Instagram URL
+url = "https://www.instagram.com/reel/C-2zD8IuU75/?igsh=eHo0MXkzN3Zubjc4"  # Replace with a valid shortcode
+try:
+    # Extract shortcode based on URL type
+    if 'instagram.com/p/' in url:
+        match = re.search(r'/p/([^/?]+)', url)
+    else:
+        print("Unsupported URL format.")
+        exit(1)
 
-@app.route('/insta', methods=['GET'])
-def insta_downloader():
-    url = request.args.get('url')
-    if not url:
-        return jsonify({"error": "No URL provided."}), 400
+    if not match:
+        print("Failed to extract shortcode.")
+        exit(1)
 
-    try:
-        print(f"Received URL: {url}")
+    shortcode = match.group(1)
+    print(f"Extracted Shortcode: {shortcode}")
 
-        # Extract shortcode based on URL type
-        if 'instagram.com/p/' in url:
-            match = re.search(r'/p/([^/?]+)', url)
-        elif 'instagram.com/reel/' in url:
-            match = re.search(r'/reel/([^/?]+)', url)
-        elif 'instagram.com/stories/' in url:
-            match = re.search(r'/stories/([^/?]+)', url)
-        else:
-            return jsonify({"error": "Unsupported URL format."}), 400
+    post = instaloader.Post.from_shortcode(L.context, shortcode)
+    print(f"Caption: {post.caption}")
+    print(f"Likes: {post.likes}")
 
-        if not match:
-            return jsonify({"error": "Failed to extract shortcode."}), 400
+    if post.is_video:
+        print(f"Video URL: {post.video_url}")
+    else:
+        print(f"Image URL: {post.url}")
 
-        shortcode = match.group(1)
-        print(f"Extracted Shortcode: {shortcode}")
-
-        def fetch_post():
-            try:
-                post = instaloader.Post.from_shortcode(L.context, shortcode)
-                return post
-            except Exception as e:
-                print(f"Error in fetch_post: {e}")
-                raise
-
-        post = retry_request(fetch_post)
-
-        data = {
-            "caption": post.caption,
-            "likes": post.likes,
-            "media": []
-        }
-
-        if post.is_video:
-            data["media"].append({
-                "media_url": post.url,
-                "is_video": True,
-                "video_url": post.video_url
-            })
-        else:
-            if post.get_sidecar_nodes():
-                for item in post.get_sidecar_nodes():
-                    media_data = {
-                        "media_url": item.display_url,
-                        "is_video": item.is_video
-                    }
-                    if item.is_video:
-                        media_data["video_url"] = item.video_url
-                    data["media"].append(media_data)
-            else:
-                data["media"].append({
-                    "media_url": post.url,
-                    "is_video": post.is_video,
-                    "video_url": post.video_url if post.is_video else None
-                })
-
-        return jsonify(data)
-    except Exception as e:
-        print(f"Exception occurred: {e}")
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+except Exception as e:
+    print(f"Error: {e}")
