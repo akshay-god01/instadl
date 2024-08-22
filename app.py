@@ -6,6 +6,11 @@ import re
 app = Flask(__name__)
 L = instaloader.Instaloader()
 
+# Login to Instagram
+USERNAME = 'instadl6'
+PASSWORD = 'eypzgod'
+L.login(USERNAME, PASSWORD)
+
 def retry_request(func, retries=3, delay=10):
     for i in range(retries):
         try:
