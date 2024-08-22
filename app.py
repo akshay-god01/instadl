@@ -1,4 +1,3 @@
-import time
 from flask import Flask, request, jsonify
 import instaloader
 import re
@@ -6,10 +5,14 @@ import re
 app = Flask(__name__)
 L = instaloader.Instaloader()
 
-# Login to Instagram
-USERNAME = 'instadl6'
-PASSWORD = 'eypzgod'
-L.login(USERNAME, PASSWORD)
+# Load the session from the file
+try:
+    L.load_session_from_file(filename='session-instagram')
+    print("Session loaded successfully.")
+except Exception as e:
+    print(f"Failed to load session: {e}")
+    # Optionally, you can fall back to manual login
+    # L.login(USERNAME, PASSWORD)
 
 def retry_request(func, retries=3, delay=10):
     for i in range(retries):
@@ -29,6 +32,7 @@ def insta_downloader():
     try:
         print(f"Received URL: {url}")
 
+        # Extract shortcode based on URL type
         if 'instagram.com/p/' in url:
             match = re.search(r'/p/([^/?]+)', url)
         elif 'instagram.com/reel/' in url:
